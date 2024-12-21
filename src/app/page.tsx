@@ -1,101 +1,158 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import { useChat } from "ai/react";
+import { useState, useEffect } from "react";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+interface Message {
+  id: string;
+  role: "user" | "assistant" | "system" | "data";
+  content: string;
+  toolResults?: any[];
+}
+
+export default function Chat() {
+  const [showSetup, setShowSetup] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [keys, setKeys] = useState({
+    walletKey: "",
+    xaiKey: "",
+    openaiKey: "",
+  });
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    useChat({
+      api: "/api/chat",
+      headers: {
+        "X-Wallet-Key": keys.walletKey,
+        "X-Xai-Key": keys.xaiKey || "",
+        "X-OpenAI-Key": keys.openaiKey || "",
+      },
+      onResponse: async (response) => {
+        // No return value needed - useChat will handle the response
+        await response.json();
+      },
+    });
+
+  useEffect(() => {
+    setShowSetup(true);
+    setMounted(true);
+  }, []);
+
+  const handleSetupSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowSetup(false);
+  };
+
+  if (showSetup) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <form
+          onSubmit={handleSetupSubmit}
+          className="bg-white p-6 rounded-lg max-w-md w-full"
+        >
+          <h2 className="text-xl font-bold mb-4 text-black">Setup Required</h2>
+          <div className="mb-4">
+            <label className="block mb-2 text-black">Wallet Private Key:</label>
+            <input
+              type="password"
+              className="w-full p-2 border rounded text-black placeholder:text-gray-500"
+              value={keys.walletKey}
+              onChange={(e) =>
+                setKeys((prev) => ({ ...prev, walletKey: e.target.value }))
+              }
+              placeholder="0x..."
+              required
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-black">XAI Key (Optional):</label>
+            <input
+              type="password"
+              className="w-full p-2 border rounded text-black placeholder:text-gray-500"
+              value={keys.xaiKey}
+              onChange={(e) =>
+                setKeys((prev) => ({ ...prev, xaiKey: e.target.value }))
+              }
+              placeholder="Enter your XAI key"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 text-black">
+              OpenAI Key (Optional):
+            </label>
+            <input
+              type="password"
+              className="w-full p-2 border rounded text-black placeholder:text-gray-500"
+              value={keys.openaiKey}
+              onChange={(e) =>
+                setKeys((prev) => ({ ...prev, openaiKey: e.target.value }))
+              }
+              placeholder="Enter your OpenAI key"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
           >
-            Read our docs
-          </a>
+            Start Chat
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col w-full max-w-md py-24 mx-auto stretch">
+      <div className="flex-1 overflow-y-auto">
+        {messages.map((m: Message) => (
+          <div
+            key={m.id}
+            className={`mb-4 ${
+              m.role === "assistant"
+                ? "bg-gray-100 p-4 rounded-lg border border-gray-200"
+                : "bg-blue-500 text-white p-4 rounded-lg"
+            }`}
+          >
+            <div className="font-bold mb-2">
+              {m.role === "assistant" ? "🤖 AI" : "👤 You"}:
+            </div>
+            <div className="whitespace-pre-wrap">
+              {m.content}
+              {m.toolResults && (
+                <pre className="mt-2 bg-gray-800 text-white p-2 rounded text-sm">
+                  {JSON.stringify(m.toolResults, null, 2)}
+                </pre>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="fixed bottom-0 w-full max-w-md p-4 bg-white border-t"
+      >
+        <div className="relative">
+          <input
+            className="w-full p-4 pr-12 border-2 border-blue-500 rounded-full focus:outline-none focus:border-blue-600 text-black placeholder:text-gray-500"
+            value={input}
+            placeholder="Type your message..."
+            onChange={handleInputChange}
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 transition-colors"
+          >
+            {isLoading ? (
+              <span className="animate-pulse">...</span>
+            ) : (
+              <span className="text-xl">→</span>
+            )}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </form>
     </div>
   );
 }
