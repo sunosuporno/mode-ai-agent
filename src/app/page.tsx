@@ -4,12 +4,14 @@ import { useChat } from "ai/react";
 import { useState } from "react";
 import { Message as VercelMessage } from "ai";
 
+interface ToolCall {
+  toolName: string;
+  args: Record<string, unknown>;
+  result?: Record<string, unknown>;
+}
+
 interface Message extends VercelMessage {
-  toolCalls?: Array<{
-    toolName: string;
-    args: any;
-    result?: any;
-  }>;
+  toolCalls?: ToolCall[];
 }
 
 export default function Chat() {
