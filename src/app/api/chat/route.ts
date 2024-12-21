@@ -8,7 +8,6 @@ import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
 import { sendETH } from "@goat-sdk/wallet-evm";
 import { viem } from "@goat-sdk/wallet-viem";
-import { generateText } from "ai";
 
 export async function POST(req: Request) {
   try {
